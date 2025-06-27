@@ -1,0 +1,38 @@
+// Класс для моделирования банка
+export class Bank {
+  constructor(maxCapacity) {
+    this.maxCapacity = maxCapacity; // Максимальное количество клиентов
+    this.clients = []; // Текущие клиенты в банке
+    this.counters = []; // Окна обслуживания
+    this.totalServed = 0; // Общее количество обслуженных клиентов
+  }
+}
+
+// Класс для окна обслуживания
+export class Counter {
+  constructor(id, processTime) {
+    this.id = id; // ID окна
+    this.processTime = processTime; // Время обработки (мс)
+    this.currentClient = null; // Текущий клиент
+    this.isAvailable = true; // Свободно ли окно
+    this.position = { x: 0, y: 0 }; // Позиция на экране
+  }
+}
+
+// Класс для клиента
+export class Client {
+  static nextId = 1; // Счетчик для генерации ID
+  
+  constructor() {
+    this.id = Client.nextId++; // Уникальный ID
+    this.position = { x: 0, y: 0 }; // Текущая позиция
+    this.targetPosition = null; // Целевая позиция
+    this.targetCounter = null; // Целевое окно
+    this.speed = 0.5 + Math.random(); // Скорость движения
+    this.isWaiting = false; // Ожидает ли у окна
+    this.patience = 5000 + Math.random() * 10000; // Время до ухода без обслуживания
+    this.enteredTime = Date.now(); // Время входа
+    this.isLeaving = false; // Уходит ли клиент
+    this.served = false; // Был ли обслужен
+  }
+}

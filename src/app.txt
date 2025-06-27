@@ -31,11 +31,10 @@
     </div>
     
     <div class="stats">
-      <div>Клиентов в банке: {{ bank.clients.length }} / {{ maxCustomers }}</div>
+      <div>Клиентов в банке: {{ bank.clients.length }}</div>
       <div>Свободных окон: {{ availableCounters }}</div>
       <div>Обслужено: {{ bank.totalServed }} / {{ maxCustomers }}</div>
-      <div v-if="bank.isWindingDown" class="simulation-winding">Завершение работы...</div>
-      <div v-if="simulationFinished" class="simulation-finished">Симуляция завершена!</div>
+      <div v-if="simulationFinished" class="simulation-finished">Симуляция окончена!</div>
     </div>
     
     <div class="bank-visualization" ref="bankArea">
@@ -60,10 +59,7 @@
           v-for="client in bank.clients" 
           :key="client.id"
           class="client"
-          :class="{ 
-            'client-waiting': client.isWaiting,
-            'client-leaving': client.isLeaving
-          }"
+          :class="{ 'client-leaving': client.isLeaving }"
           :style="{
             left: client.position.x + 'px',
             top: client.position.y + 'px'
@@ -145,56 +141,32 @@ export default {
       this.resetSimulation();
       this.isRunning = true;
       this.simulationFinished = false;
-      this.bank.isWindingDown = false;
       
-      // Добавление новых клиентов небольшими группами
+      // Добавление новых клиентов
       this.intervals.push(setInterval(() => {
-        // Не добавляем новых клиентов если:
-        // 1. Достигнут лимит по количеству
-        // 2. Идет завершение работы
-        // 3. Уже обслужено максимальное количество
-        if (this.bank.clients.length >= this.maxCustomers || 
-            this.bank.isWindingDown ||
-            this.bank.totalServed >= this.maxCustomers) return;
-            
-        // Добавляем 1-3 клиентов за раз, но не превышая лимит
-        const availableSpace = this.maxCustomers - this.bank.clients.length;
-        if (availableSpace <= 0) return;
+        if (this.totalEntered >= this.maxCustomers * 2) return;
+        if (this.bank.totalServed >= this.maxCustomers) return;
         
-        const newClientsCount = Math.min(
-          1 + Math.floor(Math.random() * 3),
-          availableSpace
-        );
+        const client = new Client();
+        client.position = { 
+          x: 50, 
+          y: this.$refs.bankArea.clientHeight / 2 
+        };
+        client.targetPosition = this.getRandomPosition();
         
-        for (let i = 0; i < newClientsCount; i++) {
-          const client = new Client();
-          client.position = { 
-            x: 50, 
-            y: this.$refs.bankArea.clientHeight / 2 
-          };
-          client.targetPosition = this.getRandomPosition();
-          
-          this.bank.clients.push(client);
-          this.totalEntered++;
-          
-          // 30% chance to go directly to counter if available
-          if (Math.random() < 0.3 && this.availableCounters > 0) {
-            this.tryAssignToCounter(client);
-          }
-        }
+        this.bank.clients.push(client);
+        this.totalEntered++;
       }, this.arrivalRate));
       
       // Основной цикл анимации и логики
       this.intervals.push(setInterval(() => {
         const now = Date.now();
         
-        // 1. Обработка движения клиентов
         this.bank.clients.forEach(client => {
-          // Клиент может уйти без обслуживания (0.05% chance)
+          // Проверка на уход без обслуживания
           if (!client.isWaiting && !client.targetCounter && 
-              !client.isLeaving &&
               now - client.enteredTime > client.patience && 
-              Math.random() < 0.0005) {
+              Math.random() < 0.005) {
             this.makeClientLeave(client);
             return;
           }
@@ -218,60 +190,48 @@ export default {
           if (distance > 2) {
             client.position.x += (dx / distance) * client.speed;
             client.position.y += (dy / distance) * client.speed;
-          } else if (client.targetCounter) {
-            // Подошли к окну - начинаем обслуживание
-            const counter = this.bank.counters.find(c => c.id === client.targetCounter);
-            if (counter && counter.isAvailable) {
-              this.serveClient(client, counter);
-            } else {
-              // Окно занято - идем гулять
-              client.targetPosition = this.getRandomPosition();
-              client.targetCounter = null;
-              client.isWaiting = false;
-            }
           } else {
-            // Случайное перемещение по залу
-            client.targetPosition = this.getRandomPosition();
-            
-            // Периодически пытаемся найти свободное окно
-            if (Math.random() < 0.05) {
-              this.tryAssignToCounter(client);
+            // Если достигли цели
+            if (client.targetCounter) {
+              const counter = this.bank.counters.find(c => c.id === client.targetCounter);
+              if (counter && counter.isAvailable) {
+                this.serveClient(client, counter);
+              } else {
+                client.targetPosition = this.getRandomPosition();
+                client.targetCounter = null;
+                client.isWaiting = false;
+              }
+            } else {
+              client.targetPosition = this.getRandomPosition();
+              if (Math.random() < 0.05 && !client.isWaiting) {
+                this.tryAssignToCounter(client);
+              }
             }
           }
         });
         
-        // 2. Назначение клиентов к свободным окнам
-        if (!this.bank.isWindingDown && this.availableCounters > 0 && this.bank.totalServed < this.maxCustomers) {
+        // Назначение клиентов к свободным окнам (по одному на окно)
+        if (this.availableCounters > 0) {
           const freeCounters = this.bank.counters.filter(c => c.isAvailable);
-          
           freeCounters.forEach(counter => {
-            // Ищем самого "старого" клиента не у окна
-            const waitingClient = this.bank.clients
+            const oldestClient = this.bank.clients
               .filter(c => !c.isWaiting && !c.targetCounter && !c.isLeaving)
-              .sort((a, b) => a.enteredTime - b.enteredTime)[0];
+              .sort((a, b) => a.id - b.id)[0];
             
-            if (waitingClient) {
-              waitingClient.targetCounter = counter.id;
-              waitingClient.targetPosition = {
+            if (oldestClient) {
+              oldestClient.targetCounter = counter.id;
+              oldestClient.targetPosition = {
                 x: counter.position.x - 30,
                 y: counter.position.y
               };
-              waitingClient.isWaiting = true;
+              oldestClient.isWaiting = true;
             }
           });
-        }
-        
-        // 3. Проверка завершения симуляции
-        if (this.bank.totalServed >= this.maxCustomers && 
-            this.bank.clients.length === 0) {
-          this.finishSimulation();
         }
       }, 16));
     },
     
     tryAssignToCounter(client) {
-      if (this.bank.isWindingDown || this.bank.totalServed >= this.maxCustomers) return;
-      
       const freeCounter = this.bank.counters.find(c => c.isAvailable);
       if (freeCounter) {
         client.targetCounter = freeCounter.id;
@@ -300,45 +260,62 @@ export default {
         client.position.x += (dx / distance) * client.speed * 1.5;
         client.position.y += (dy / distance) * client.speed * 1.5;
       } else {
-        // Клиент вышел
         this.bank.clients = this.bank.clients.filter(c => c.id !== client.id);
+        if (!client.served && this.bank.totalServed < this.maxCustomers) {
+          this.addReplacementClient();
+        }
       }
+    },
+    
+    addReplacementClient() {
+      if (this.totalEntered >= this.maxCustomers * 2) return;
+      if (this.bank.totalServed >= this.maxCustomers) return;
+      
+      const client = new Client();
+      client.position = { 
+        x: 50, 
+        y: this.$refs.bankArea.clientHeight / 2 
+      };
+      client.targetPosition = this.getRandomPosition();
+      
+      this.bank.clients.push(client);
+      this.totalEntered++;
     },
     
     async serveClient(client, counter) {
-      // Клиент исчезает при подходе к окну
-      this.bank.clients = this.bank.clients.filter(c => c.id !== client.id);
-      
+      client.isWaiting = false;
       counter.isAvailable = false;
       counter.currentClient = client;
       
-      // Имитация времени обслуживания
       await new Promise(resolve => setTimeout(resolve, counter.processTime));
       
-      // Обслуживание завершено
       client.served = true;
-      this.bank.totalServed = Math.min(this.bank.totalServed + 1, this.maxCustomers);
+      this.bank.totalServed++;
+      
+      client.isLeaving = true;
+      client.targetPosition = {
+        x: 30,
+        y: this.$refs.bankArea.clientHeight / 2
+      };
+      
+      await new Promise(resolve => {
+        const checkExit = setInterval(() => {
+          if (!client.targetPosition || Math.abs(client.position.x - 30) < 5) {
+            clearInterval(checkExit);
+            resolve();
+          }
+        }, 100);
+      });
+      
+      this.bank.clients = this.bank.clients.filter(c => c.id !== client.id);
       counter.isAvailable = true;
       counter.currentClient = null;
       
-      // Проверяем не достигли ли мы лимита
-      if (this.bank.totalServed >= this.maxCustomers && !this.bank.isWindingDown) {
-        this.startWindingDown();
+      if (this.bank.totalServed >= this.maxCustomers) {
+        this.finishSimulation();
+      } else {
+        this.addReplacementClient();
       }
-    },
-    
-    startWindingDown() {
-      this.bank.isWindingDown = true;
-      
-      // Прекращаем впуск новых клиентов
-      clearInterval(this.intervals[0]);
-      
-      // Всех оставшихся клиентов направляем к выходу
-      this.bank.clients.forEach(client => {
-        if (!client.isLeaving) {
-          this.makeClientLeave(client);
-        }
-      });
     },
     
     stopSimulation() {
@@ -350,7 +327,6 @@ export default {
     finishSimulation() {
       this.stopSimulation();
       this.simulationFinished = true;
-      this.bank.isWindingDown = false;
     },
     
     resetSimulation() {
@@ -359,13 +335,10 @@ export default {
       this.bank.totalServed = 0;
       this.totalEntered = 0;
       this.simulationFinished = false;
-      this.bank.isWindingDown = false;
       this.initializeCounters();
     },
     
     getRandomPosition() {
-      if (!this.$refs.bankArea) return { x: 0, y: 0 };
-      
       return {
         x: 100 + Math.random() * (this.$refs.bankArea.clientWidth - 200),
         y: 50 + Math.random() * (this.$refs.bankArea.clientHeight - 100)
@@ -432,13 +405,8 @@ button:disabled {
   border-radius: 8px;
 }
 
-.simulation-winding {
-  color: #FF9800;
-  font-weight: bold;
-}
-
 .simulation-finished {
-  color: #4CAF50;
+  color: #f44336;
   font-weight: bold;
 }
 
@@ -502,18 +470,9 @@ button:disabled {
   filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));
 }
 
-.client-waiting .client-emoji {
-  animation: pulse 1s infinite alternate;
-}
-
 .client-leaving {
   opacity: 0.7;
   transform: translate(-50%, -50%) scale(0.9);
   transition: all 0.5s ease-out;
-}
-
-@keyframes pulse {
-  from { transform: scale(1); }
-  to { transform: scale(1.1); }
 }
 </style>
