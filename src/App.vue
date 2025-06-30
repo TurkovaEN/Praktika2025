@@ -49,7 +49,7 @@
           :style="{
             left: counter.position.x + 'px',
             top: counter.position.y + 'px',
-            backgroundColor: counter.isAvailable ? '#4CAF50' : '#F44336'
+            backgroundColor: this.queuePositions[counter.id-1]?.length > 0 ? '#F44336' : '#4CAF50'
           }"
         >
           <span v-if="counter.currentClient">⏱️</span>
@@ -90,7 +90,9 @@ export default {
       isRunning: false,
       simulationFinished: false,
       intervals: [],
-      totalEntered: 0
+      totalEntered: 0,
+      queuePositions: [],
+      isDrainingQueues: false
     };
   },
   computed: {
@@ -120,20 +122,32 @@ export default {
       this.bank.counters = Array.from({ length: count }, (_, i) => {
         return new Counter(i + 1, this.processSpeed);
       });
+      this.queuePositions = Array(count).fill().map(() => []);
       this.positionCounters();
     },
     
     positionCounters() {
-      if (!this.$refs.bankArea) return;
+      if (!this.$refs.bankArea) {
+        setTimeout(this.positionCounters, 100);
+        return;
+      }
       
       const bankRect = this.$refs.bankArea.getBoundingClientRect();
       const offset = 70;
+      const queueSpacing = 30;
       
       this.bank.counters.forEach((counter, i) => {
         counter.position = {
           x: bankRect.width - offset,
           y: offset + i * (bankRect.height - 2 * offset) / this.counterCount
         };
+        
+        this.queuePositions[i].forEach((client, pos) => {
+          client.targetPosition = {
+            x: counter.position.x - 30 - (pos * queueSpacing),
+            y: counter.position.y
+          };
+        });
       });
     },
     
@@ -147,70 +161,51 @@ export default {
       this.simulationFinished = false;
       this.bank.isWindingDown = false;
       
-      // Добавление новых клиентов небольшими группами
+      // Добавление новых клиентов
       this.intervals.push(setInterval(() => {
-        // Не добавляем новых клиентов если:
-        // 1. Достигнут лимит по количеству
-        // 2. Идет завершение работы
-        // 3. Уже обслужено максимальное количество
         if (this.bank.clients.length >= this.maxCustomers || 
             this.bank.isWindingDown ||
             this.bank.totalServed >= this.maxCustomers) return;
             
-        // Добавляем 1-3 клиентов за раз, но не превышая лимит
-        const availableSpace = this.maxCustomers - this.bank.clients.length;
-        if (availableSpace <= 0) return;
+        const client = new Client();
+        client.position = { 
+          x: 50, 
+          y: this.$refs.bankArea.clientHeight / 2 
+        };
         
-        const newClientsCount = Math.min(
-          1 + Math.floor(Math.random() * 3),
-          availableSpace
-        );
+        // Находим окно с самой короткой очередью
+        let shortestQueueIndex = 0;
+        let shortestQueueLength = this.queuePositions[0].length;
         
-        for (let i = 0; i < newClientsCount; i++) {
-          const client = new Client();
-          client.position = { 
-            x: 50, 
-            y: this.$refs.bankArea.clientHeight / 2 
-          };
-          client.targetPosition = this.getRandomPosition();
-          
-          this.bank.clients.push(client);
-          this.totalEntered++;
-          
-          // 30% chance to go directly to counter if available
-          if (Math.random() < 0.3 && this.availableCounters > 0) {
-            this.tryAssignToCounter(client);
+        for (let i = 1; i < this.counterCount; i++) {
+          if (this.queuePositions[i].length < shortestQueueLength) {
+            shortestQueueIndex = i;
+            shortestQueueLength = this.queuePositions[i].length;
           }
         }
+        
+        // Добавляем клиента в очередь
+        this.queuePositions[shortestQueueIndex].push(client);
+        client.targetCounter = this.bank.counters[shortestQueueIndex].id;
+        client.isWaiting = true;
+        
+        // Позиция в очереди
+        client.targetPosition = {
+          x: this.bank.counters[shortestQueueIndex].position.x - 30 - (shortestQueueLength * 30),
+          y: this.bank.counters[shortestQueueIndex].position.y
+        };
+        
+        this.bank.clients.push(client);
+        this.totalEntered++;
+        
       }, this.arrivalRate));
       
-      // Основной цикл анимации и логики
+      // Основной цикл
       this.intervals.push(setInterval(() => {
-        const now = Date.now();
-        
-        // 1. Обработка движения клиентов
+        // Обработка движения клиентов
         this.bank.clients.forEach(client => {
-          // Клиент может уйти без обслуживания (0.05% chance)
-          if (!client.isWaiting && !client.targetCounter && 
-              !client.isLeaving &&
-              now - client.enteredTime > client.patience && 
-              Math.random() < 0.0005) {
-            this.makeClientLeave(client);
-            return;
-          }
+          if (!client.targetPosition) return;
           
-          // Обработка уходящих клиентов
-          if (client.isLeaving) {
-            this.handleLeavingClient(client);
-            return;
-          }
-          
-          // Если нет цели - назначаем случайную
-          if (!client.targetPosition) {
-            client.targetPosition = this.getRandomPosition();
-          }
-          
-          // Движение к цели
           const dx = client.targetPosition.x - client.position.x;
           const dy = client.targetPosition.y - client.position.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
@@ -218,99 +213,50 @@ export default {
           if (distance > 2) {
             client.position.x += (dx / distance) * client.speed;
             client.position.y += (dy / distance) * client.speed;
-          } else if (client.targetCounter) {
-            // Подошли к окну - начинаем обслуживание
-            const counter = this.bank.counters.find(c => c.id === client.targetCounter);
-            if (counter && counter.isAvailable) {
-              this.serveClient(client, counter);
-            } else {
-              // Окно занято - идем гулять
-              client.targetPosition = this.getRandomPosition();
-              client.targetCounter = null;
-              client.isWaiting = false;
-            }
-          } else {
-            // Случайное перемещение по залу
-            client.targetPosition = this.getRandomPosition();
-            
-            // Периодически пытаемся найти свободное окно
-            if (Math.random() < 0.05) {
-              this.tryAssignToCounter(client);
-            }
           }
         });
         
-        // 2. Назначение клиентов к свободным окнам
-        if (!this.bank.isWindingDown && this.availableCounters > 0 && this.bank.totalServed < this.maxCustomers) {
-          const freeCounters = this.bank.counters.filter(c => c.isAvailable);
-          
-          freeCounters.forEach(counter => {
-            // Ищем самого "старого" клиента не у окна
-            const waitingClient = this.bank.clients
-              .filter(c => !c.isWaiting && !c.targetCounter && !c.isLeaving)
-              .sort((a, b) => a.enteredTime - b.enteredTime)[0];
-            
-            if (waitingClient) {
-              waitingClient.targetCounter = counter.id;
-              waitingClient.targetPosition = {
-                x: counter.position.x - 30,
-                y: counter.position.y
-              };
-              waitingClient.isWaiting = true;
+        // Назначение клиентов к свободным окнам
+        if (!this.bank.isWindingDown && !this.isDrainingQueues) {
+          this.bank.counters.forEach((counter, i) => {
+            if (counter.isAvailable && this.queuePositions[i].length > 0) {
+              const nextClient = this.queuePositions[i][0];
+              if (nextClient) {
+                this.serveClient(nextClient, counter);
+              }
             }
           });
         }
         
-        // 3. Проверка завершения симуляции
-        if (this.bank.totalServed >= this.maxCustomers && 
-            this.bank.clients.length === 0) {
-          this.finishSimulation();
+        // Проверка завершения
+        if (!this.isDrainingQueues && this.bank.totalServed >= this.maxCustomers) {
+          this.startWindingDown();
         }
       }, 16));
     },
     
-    tryAssignToCounter(client) {
-      if (this.bank.isWindingDown || this.bank.totalServed >= this.maxCustomers) return;
-      
-      const freeCounter = this.bank.counters.find(c => c.isAvailable);
-      if (freeCounter) {
-        client.targetCounter = freeCounter.id;
-        client.targetPosition = {
-          x: freeCounter.position.x - 30,
-          y: freeCounter.position.y
-        };
-        client.isWaiting = true;
-      }
-    },
-    
-    makeClientLeave(client) {
-      client.isLeaving = true;
-      client.targetPosition = {
-        x: 30,
-        y: this.$refs.bankArea.clientHeight / 2
-      };
-    },
-    
-    handleLeavingClient(client) {
-      const dx = client.targetPosition.x - client.position.x;
-      const dy = client.targetPosition.y - client.position.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (distance > 2) {
-        client.position.x += (dx / distance) * client.speed * 1.5;
-        client.position.y += (dy / distance) * client.speed * 1.5;
-      } else {
-        // Клиент вышел
-        this.bank.clients = this.bank.clients.filter(c => c.id !== client.id);
-      }
-    },
-    
     async serveClient(client, counter) {
-      // Клиент исчезает при подходе к окну
-      this.bank.clients = this.bank.clients.filter(c => c.id !== client.id);
+      // Удаляем клиента из очереди
+      const queueIndex = this.queuePositions[counter.id - 1].indexOf(client);
+      if (queueIndex >= 0) {
+        this.queuePositions[counter.id - 1].splice(queueIndex, 1);
+      }
       
+      // Обновляем позиции оставшихся в очереди
+      this.updateQueuePositions();
+      
+      // Начинаем обслуживание
       counter.isAvailable = false;
       counter.currentClient = client;
+      
+      // Клиент подходит к окну
+      client.targetPosition = {
+        x: counter.position.x - 15,
+        y: counter.position.y
+      };
+      
+      // Ждем пока подойдет
+      await this.waitForClientToReachPosition(client);
       
       // Имитация времени обслуживания
       await new Promise(resolve => setTimeout(resolve, counter.processTime));
@@ -318,26 +264,74 @@ export default {
       // Обслуживание завершено
       client.served = true;
       this.bank.totalServed = Math.min(this.bank.totalServed + 1, this.maxCustomers);
+      
+      // Клиент уходит
+      await this.makeClientLeave(client);
+      
       counter.isAvailable = true;
       counter.currentClient = null;
-      
-      // Проверяем не достигли ли мы лимита
-      if (this.bank.totalServed >= this.maxCustomers && !this.bank.isWindingDown) {
-        this.startWindingDown();
-      }
     },
     
     startWindingDown() {
       this.bank.isWindingDown = true;
-      
-      // Прекращаем впуск новых клиентов
       clearInterval(this.intervals[0]);
+      this.drainQueues();
+    },
+    
+    async drainQueues() {
+      this.isDrainingQueues = true;
       
-      // Всех оставшихся клиентов направляем к выходу
-      this.bank.clients.forEach(client => {
-        if (!client.isLeaving) {
-          this.makeClientLeave(client);
+      // Обрабатываем все очереди
+      for (let i = 0; i < this.queuePositions.length; i++) {
+        // Удаляем клиентов из очереди с конца к началу
+        while (this.queuePositions[i].length > 0) {
+          const client = this.queuePositions[i].pop();
+          await this.makeClientLeave(client);
+          this.updateQueuePositions();
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
+      }
+      
+      // После опустошения всех очередей завершаем симуляцию
+      this.finishSimulation();
+      this.isDrainingQueues = false;
+    },
+    
+    async makeClientLeave(client) {
+      client.isLeaving = true;
+      client.targetPosition = {
+        x: 30,
+        y: this.$refs.bankArea.clientHeight / 2
+      };
+      
+      await this.waitForClientToReachPosition(client);
+      this.bank.clients = this.bank.clients.filter(c => c.id !== client.id);
+    },
+    
+    updateQueuePositions() {
+      this.bank.counters.forEach((counter, i) => {
+        this.queuePositions[i].forEach((client, pos) => {
+          client.targetPosition = {
+            x: counter.position.x - 30 - (pos * 30),
+            y: counter.position.y
+          };
+        });
+      });
+    },
+    
+    waitForClientToReachPosition(client) {
+      return new Promise(resolve => {
+        const checkPosition = () => {
+          const dx = client.targetPosition.x - client.position.x;
+          const dy = client.targetPosition.y - client.position.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < 2) {
+            resolve();
+          } else {
+            setTimeout(checkPosition, 50);
+          }
+        };
+        checkPosition();
       });
     },
     
@@ -360,16 +354,9 @@ export default {
       this.totalEntered = 0;
       this.simulationFinished = false;
       this.bank.isWindingDown = false;
+      this.isDrainingQueues = false;
+      this.queuePositions = [];
       this.initializeCounters();
-    },
-    
-    getRandomPosition() {
-      if (!this.$refs.bankArea) return { x: 0, y: 0 };
-      
-      return {
-        x: 100 + Math.random() * (this.$refs.bankArea.clientWidth - 200),
-        y: 50 + Math.random() * (this.$refs.bankArea.clientHeight - 100)
-      };
     }
   }
 };
@@ -482,6 +469,7 @@ button:disabled {
   justify-content: center;
   font-size: 24px;
   z-index: 2;
+  transition: background-color 0.3s ease;
 }
 
 .client {
