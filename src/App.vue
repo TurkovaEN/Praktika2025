@@ -59,8 +59,9 @@
     <div class="bank-visualization" ref="bankArea">
       <div class="bank-walls">
         <div class="entrance-door">🚪</div>
-        <div class="atm" :style="{ left: atmPosition.x + 'px', top: atmPosition.y + 'px' }">🏧</div>
+        <div class="atm" :style="atmStyle">🏧</div>
         
+        <!-- Окна обслуживания -->
         <div 
           v-for="counter in bank.counters" 
           :key="counter.id"
@@ -82,76 +83,115 @@
           <div class="counter-type">{{ counter.type }}</div>
         </div>
         
-        <!-- VIP очередь -->
-        <div 
-          v-for="(client, index) in bank.vipQueue" 
-          :key="'vip-'+client.id"
-          class="client vip-client"
-          :style="{
-            left: (vipQueuePosition.x - index * 30) + 'px',
-            top: vipQueuePosition.y + 'px',
-            opacity: client.patienceLevel/100
-          }"
-        >
-          <span class="client-emoji">🎩</span>
-          <div class="client-status">{{ client.serviceType }}</div>
-          <div class="emotion-indicator" :class="client.emotion"></div>
-        </div>
-        
-        <!-- Пенсионерская очередь -->
-        <div 
-          v-for="(client, index) in bank.pensionerQueue" 
-          :key="'pensioner-'+client.id"
-          class="client pensioner-client"
-          :style="{
-            left: (pensionerQueuePosition.x - index * 30) + 'px',
-            top: pensionerQueuePosition.y + 'px',
-            opacity: client.patienceLevel/100
-          }"
-        >
-          <span class="client-emoji">👵</span>
-          <div class="client-status">{{ client.serviceType }}</div>
-          <div class="emotion-indicator" :class="client.emotion"></div>
-        </div>
-        
-        <!-- Основная очередь -->
-        <div 
-          v-for="(client) in queuePositions" 
-          :key="client.id"
-          class="client"
-          :class="{
-            'serving-client': client.isServing,
-            [client.emotion]: true
-          }"
-          :style="{
-            left: client.position.x + 'px',
-            top: client.position.y + 'px',
-            opacity: client.isServing ? 0.7 : client.patienceLevel/100
-          }"
-        >
-          <span class="client-emoji">{{ client.type === 'vip' ? '🎩' : '🧍' }}</span>
-          <div class="client-status">{{ client.serviceType }}</div>
-          <div class="emotion-indicator" :class="client.emotion"></div>
-        </div>
-        
-        <!-- Клиенты у терминала -->
-        <div 
-          v-for="client in atmClients" 
-          :key="'atm-'+client.id"
-          class="client atm-client"
-          :style="{
-            left: client.position.x + 'px',
-            top: client.position.y + 'px'
-          }"
-        >
-          <span class="client-emoji">💳</span>
-        </div>
+        <!-- Клиенты -->
+        <transition-group name="client" tag="div">
+          <!-- Входящие клиенты -->
+          <div
+            v-for="client in enteringClients"
+            :key="'entering-'+client.id"
+            class="client entering-client"
+            :style="{
+              left: client.position.x + 'px',
+              top: client.position.y + 'px',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10
+            }"
+          >
+            <span class="client-emoji">{{ client.type === 'vip' ? '🎩' : client.type === 'pensioner' ? '👵' : '🧍' }}</span>
+          </div>
+          
+          <!-- VIP очередь -->
+          <div 
+            v-for="(client, index) in bank.vipQueue" 
+            :key="'vip-'+client.id"
+            class="client vip-client"
+            :style="{
+              left: (vipQueuePosition.x - index * 30) + 'px',
+              top: vipQueuePosition.y + 'px',
+              opacity: client.patienceLevel/100,
+              transform: 'translate(-50%, -50%)'
+            }"
+          >
+            <span class="client-emoji">🎩</span>
+            <div class="client-status">{{ client.serviceType }}</div>
+            <div class="emotion-indicator" :class="client.emotion"></div>
+          </div>
+          
+          <!-- Пенсионерская очередь -->
+          <div 
+            v-for="(client, index) in bank.pensionerQueue" 
+            :key="'pensioner-'+client.id"
+            class="client pensioner-client"
+            :style="{
+              left: (pensionerQueuePosition.x - index * 30) + 'px',
+              top: pensionerQueuePosition.y + 'px',
+              opacity: client.patienceLevel/100,
+              transform: 'translate(-50%, -50%)'
+            }"
+          >
+            <span class="client-emoji">👵</span>
+            <div class="client-status">{{ client.serviceType }}</div>
+            <div class="emotion-indicator" :class="client.emotion"></div>
+          </div>
+          
+          <!-- Основная очередь -->
+          <div 
+            v-for="(client, index) in queuePositions" 
+            :key="client.id"
+            class="client"
+            :class="{
+              'serving-client': client.isServing,
+              [client.emotion]: true
+            }"
+            :style="{
+              left: (mainQueuePosition.x - index * 30) + 'px',
+              top: mainQueuePosition.y + 'px',
+              opacity: client.isServing ? 0.7 : client.patienceLevel/100,
+              transform: 'translate(-50%, -50%)'
+            }"
+          >
+            <span class="client-emoji">{{ client.type === 'vip' ? '🎩' : '🧍' }}</span>
+            <div class="client-status">{{ client.serviceType }}</div>
+            <div class="emotion-indicator" :class="client.emotion"></div>
+          </div>
+          
+          <!-- Клиенты у терминала -->
+          <div 
+            v-for="client in atmClients" 
+            :key="'atm-'+client.id"
+            class="client atm-client"
+            :style="{
+              left: client.position.x + 'px',
+              top: client.position.y + 'px',
+              transform: 'translate(-50%, -50%)'
+            }"
+          >
+            <span class="client-emoji">💳</span>
+          </div>
+          
+          <!-- Уходящие клиенты -->
+          <div
+            v-for="client in leavingClients"
+            :key="'leaving-'+client.id"
+            class="client leaving-client"
+            :style="{
+              left: client.position.x + 'px',
+              top: client.position.y + 'px',
+              transform: 'translate(-50%, -50%)',
+              opacity: client.leaveProgress,
+              zIndex: 5
+            }"
+          >
+            <span class="client-emoji">{{ client.type === 'vip' ? '🎩' : client.type === 'pensioner' ? '👵' : '🧍' }}</span>
+          </div>
+        </transition-group>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import './BankSimulation.css';
 import { Bank, Counter, Client } from './Bank';
 
 export default {
@@ -168,17 +208,23 @@ export default {
       isRunning: false,
       simulationFinished: false,
       intervals: [],
+      animationFrame: null,
+      lastUpdateTime: 0,
       totalEntered: 0,
       leftClients: 0,
       queuePositions: [],
       atmClients: [],
-      atmPosition: { x: 150, y: 100 },
-      vipQueuePosition: { x: 400, y: 80 },
-      pensionerQueuePosition: { x: 400, y: 400 },
-      isDrainingQueues: false,
+      enteringClients: [],
+      leavingClients: [],
+      atmBroken: false,
       randomEventActive: false,
       randomEventText: '',
-      atmBroken: false
+      vipQueuePosition: { x: 0, y: 0 },
+      pensionerQueuePosition: { x: 0, y: 0 },
+      mainQueuePosition: { x: 0, y: 0 },
+      atmPosition: { x: 0, y: 0 },
+      entrancePosition: { x: 0, y: 0 },
+      exitPosition: { x: 0, y: 0 }
     };
   },
   computed: {
@@ -193,7 +239,16 @@ export default {
              this.bank.vipQueue.length + 
              this.bank.pensionerQueue.length + 
              this.queuePositions.length +
-             this.atmClients.length;
+             this.atmClients.length +
+             this.enteringClients.length +
+             this.leavingClients.length;
+    },
+    atmStyle() {
+      return {
+        left: this.atmPosition.x + 'px',
+        top: this.atmPosition.y + 'px',
+        transform: 'translate(-50%, -50%)'
+      };
     }
   },
   watch: {
@@ -251,6 +306,7 @@ export default {
       const offset = 70;
       const spacing = (bankRect.height - 2 * offset) / Math.max(1, this.counterCount);
       
+      // Позиционирование окон
       this.bank.counters.forEach((counter, i) => {
         counter.position = {
           x: bankRect.width - offset,
@@ -258,7 +314,7 @@ export default {
         };
       });
       
-      // Позиционирование элементов
+      // Позиционирование других элементов
       this.vipQueuePosition = { 
         x: bankRect.width * 0.7, 
         y: bankRect.height * 0.2 
@@ -269,9 +325,24 @@ export default {
         y: bankRect.height * 0.8 
       };
       
+      this.mainQueuePosition = {
+        x: bankRect.width * 0.7,
+        y: bankRect.height / 2
+      };
+      
       this.atmPosition = { 
         x: bankRect.width * 0.2, 
         y: bankRect.height * 0.8 
+      };
+      
+      this.entrancePosition = {
+        x: 30,
+        y: bankRect.height / 2
+      };
+      
+      this.exitPosition = {
+        x: 30,
+        y: bankRect.height / 2
       };
     },
     
@@ -288,6 +359,21 @@ export default {
       this.bank.isWindingDown = false;
       this.atmBroken = false;
       
+      // Анимационный цикл
+      const animate = (timestamp) => {
+        if (!this.lastUpdateTime) this.lastUpdateTime = timestamp;
+        const deltaTime = timestamp - this.lastUpdateTime;
+        this.lastUpdateTime = timestamp;
+        
+        this.updateClients(deltaTime);
+        
+        if (this.isRunning) {
+          this.animationFrame = requestAnimationFrame(animate);
+        }
+      };
+      
+      this.animationFrame = requestAnimationFrame(animate);
+      
       // Добавление новых клиентов
       this.intervals.push(setInterval(() => {
         if (this.bank.isWindingDown) return;
@@ -299,74 +385,126 @@ export default {
           client.type = 'vip';
         }
         
-        // Распределение клиентов
-        if (client.type === 'vip') {
-          this.bank.vipQueue.push(client);
-          client.position = { x: 50, y: 100 };
-          client.targetPosition = { ...this.vipQueuePosition };
-        } 
-        else if (client.type === 'pensioner') {
-          this.bank.pensionerQueue.push(client);
-          client.position = { x: 50, y: 150 };
-          client.targetPosition = { ...this.pensionerQueuePosition };
-        } 
-        else {
-          if (!this.atmBroken && Math.random() < 0.3 && 
-              (client.serviceType === 'payment' || client.serviceType === 'deposit')) {
-            this.processAtmClient(client);
-          } else {
-            this.addToRegularQueue(client);
-          }
-        }
+        // Начальная позиция за пределами банка
+        client.position = { 
+          x: this.entrancePosition.x - 40, 
+          y: this.entrancePosition.y 
+        };
+        client.targetPosition = { ...this.entrancePosition };
         
+        this.enteringClients.push(client);
         this.totalEntered++;
+        
+        // Через 1 сек добавляем в соответствующую очередь
+        setTimeout(() => {
+          this.assignClientToQueue(client);
+          this.enteringClients = this.enteringClients.filter(c => c.id !== client.id);
+        }, 1000);
       }, this.arrivalRate));
       
-      // Основной цикл
+      // Логика обслуживания
       this.intervals.push(setInterval(() => {
-        this.updateClientsEmotions();
-        this.checkLeavingClients();
         this.serveQueues();
-        this.moveClients();
-      }, 50));
+      }, 100));
+      
+      // Проверка ухода клиентов
+      this.intervals.push(setInterval(() => {
+        this.checkLeavingClients();
+      }, 500));
     },
     
-    updateClientsEmotions() {
-      [...this.bank.vipQueue, ...this.bank.pensionerQueue, ...this.queuePositions].forEach(client => {
-        client.updateEmotion();
-      });
-    },
-    
-    checkLeavingClients() {
-      // VIP очередь
-      this.bank.vipQueue = this.bank.vipQueue.filter(client => {
-        if (Math.random() < this.leaveChance/10000 * client.patienceLevel) {
-          this.makeClientLeave(client);
-          this.leftClients++;
-          return false;
+    assignClientToQueue(client) {
+      if (client.type === 'vip') {
+        this.bank.vipQueue.push(client);
+        client.targetPosition = { 
+          x: this.vipQueuePosition.x - (this.bank.vipQueue.length - 1) * 30,
+          y: this.vipQueuePosition.y
+        };
+      } 
+      else if (client.type === 'pensioner') {
+        this.bank.pensionerQueue.push(client);
+        client.targetPosition = { 
+          x: this.pensionerQueuePosition.x - (this.bank.pensionerQueue.length - 1) * 30,
+          y: this.pensionerQueuePosition.y
+        };
+      }
+      else {
+        if (!this.atmBroken && Math.random() < 0.3 && 
+            (client.serviceType === 'payment' || client.serviceType === 'deposit')) {
+          this.processAtmClient(client);
+        } else {
+          this.addToRegularQueue(client);
         }
-        return true;
+      }
+    },
+    
+    updateClients(deltaTime) {
+      const speedFactor = deltaTime / 16; // Нормализация скорости
+      
+      // Входящие клиенты
+      this.enteringClients.forEach(client => {
+        this.moveClient(client, speedFactor);
+      });
+      
+      // VIP очередь
+      this.bank.vipQueue.forEach((client, index) => {
+        client.targetPosition = {
+          x: this.vipQueuePosition.x - index * 30,
+          y: this.vipQueuePosition.y
+        };
+        this.moveClient(client, speedFactor);
+        client.updateEmotion();
       });
       
       // Пенсионерская очередь
-      this.bank.pensionerQueue = this.bank.pensionerQueue.filter(client => {
-        if (Math.random() < this.leaveChance/8000 * client.patienceLevel) {
-          this.makeClientLeave(client);
-          this.leftClients++;
-          return false;
-        }
-        return true;
+      this.bank.pensionerQueue.forEach((client, index) => {
+        client.targetPosition = {
+          x: this.pensionerQueuePosition.x - index * 30,
+          y: this.pensionerQueuePosition.y
+        };
+        this.moveClient(client, speedFactor);
+        client.updateEmotion();
       });
       
       // Основная очередь
-      this.queuePositions = this.queuePositions.filter(client => {
-        if (Math.random() < this.leaveChance/5000 * client.patienceLevel) {
-          this.makeClientLeave(client);
-          this.leftClients++;
-          return false;
-        }
-        return true;
+      this.queuePositions.forEach((client, index) => {
+        client.targetPosition = {
+          x: this.mainQueuePosition.x - index * 30,
+          y: this.mainQueuePosition.y
+        };
+        this.moveClient(client, speedFactor);
+        client.updateEmotion();
       });
+      
+      // Клиенты у терминала
+      this.atmClients.forEach(client => {
+        this.moveClient(client, speedFactor);
+      });
+      
+      // Уходящие клиенты
+      this.leavingClients.forEach(client => {
+        client.leaveProgress = Math.max(0, client.leaveProgress - 0.01 * speedFactor);
+        this.moveClient(client, speedFactor);
+        
+        // Удаляем когда полностью ушли
+        if (client.leaveProgress <= 0) {
+          this.leavingClients = this.leavingClients.filter(c => c.id !== client.id);
+        }
+      });
+    },
+    
+    moveClient(client, speedFactor = 1) {
+      const dx = client.targetPosition.x - client.position.x;
+      const dy = client.targetPosition.y - client.position.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance > 2) {
+        const speed = client.speed * speedFactor;
+        client.position.x += dx * 0.05 * speed;
+        client.position.y += dy * 0.05 * speed;
+      } else {
+        client.position = { ...client.targetPosition };
+      }
     },
     
     serveQueues() {
@@ -404,13 +542,14 @@ export default {
       counter.currentClient = client;
       client.isServing = true;
       
-      // Анимация подхода
+      // Подход к окну
       client.targetPosition = {
         x: counter.position.x - 20,
         y: counter.position.y
       };
       
-      await this.waitForClientToReach(client);
+      // Ждем пока подойдет
+      await this.waitForPosition(client);
       
       // Обслуживание
       await new Promise(resolve => 
@@ -425,90 +564,86 @@ export default {
     },
     
     processAtmClient(client) {
-      client.position = { x: 50, y: this.$refs.bankArea.clientHeight - 50 };
+      client.position = { ...this.entrancePosition };
       client.targetPosition = { ...this.atmPosition };
       this.atmClients.push(client);
       
       setTimeout(() => {
         this.atmClients = this.atmClients.filter(c => c.id !== client.id);
+        this.makeClientLeave(client);
         this.bank.totalServed++;
       }, 3000 * (100/this.serviceSpeed));
     },
     
     addToRegularQueue(client) {
-      client.position = { x: 50, y: 200 };
+      client.position = { ...this.entrancePosition };
       client.targetPosition = {
-        x: this.$refs.bankArea.clientWidth - 200,
-        y: this.$refs.bankArea.clientHeight / 2
+        x: this.mainQueuePosition.x - this.queuePositions.length * 30,
+        y: this.mainQueuePosition.y
       };
       this.queuePositions.push(client);
     },
     
     async makeClientLeave(client) {
       client.isLeaving = true;
-      client.targetPosition = { x: 30, y: client.position.y };
-      await this.waitForClientToReach(client);
-      this.removeClient(client);
-    },
-    
-    removeClient(client) {
-      this.bank.clients = this.bank.clients.filter(c => c.id !== client.id);
-      this.queuePositions = this.queuePositions.filter(c => c.id !== client.id);
+      client.leaveProgress = 1;
+      client.targetPosition = { ...this.exitPosition };
+      this.leavingClients.push(client);
+      
+      // Удаляем из всех очередей
       this.bank.vipQueue = this.bank.vipQueue.filter(c => c.id !== client.id);
       this.bank.pensionerQueue = this.bank.pensionerQueue.filter(c => c.id !== client.id);
+      this.queuePositions = this.queuePositions.filter(c => c.id !== client.id);
       this.atmClients = this.atmClients.filter(c => c.id !== client.id);
     },
     
-    async waitForClientToReach(client) {
-      while (Math.abs(client.position.x - client.targetPosition.x) > 5 || 
-             Math.abs(client.position.y - client.targetPosition.y) > 5) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    },
-    
-    moveClients() {
-      // Движение VIP клиентов
-      this.bank.vipQueue.forEach((client, index) => {
-        client.targetPosition = {
-          x: this.vipQueuePosition.x - index * 30,
-          y: this.vipQueuePosition.y
-        };
-        this.moveClient(client);
+    checkLeavingClients() {
+      // Проверяем VIP очередь
+      this.bank.vipQueue = this.bank.vipQueue.filter(client => {
+        if (Math.random() < this.leaveChance/10000 * (100 - client.patienceLevel)) {
+          this.makeClientLeave(client);
+          this.leftClients++;
+          return false;
+        }
+        return true;
       });
       
-      // Движение пенсионеров
-      this.bank.pensionerQueue.forEach((client, index) => {
-        client.targetPosition = {
-          x: this.pensionerQueuePosition.x - index * 30,
-          y: this.pensionerQueuePosition.y
-        };
-        this.moveClient(client);
+      // Пенсионерская очередь
+      this.bank.pensionerQueue = this.bank.pensionerQueue.filter(client => {
+        if (Math.random() < this.leaveChance/8000 * (100 - client.patienceLevel)) {
+          this.makeClientLeave(client);
+          this.leftClients++;
+          return false;
+        }
+        return true;
       });
       
-      // Движение в основной очереди
-      this.queuePositions.forEach((client, index) => {
-        client.targetPosition = {
-          x: this.$refs.bankArea.clientWidth - 200 - index * 30,
-          y: this.$refs.bankArea.clientHeight / 2
-        };
-        this.moveClient(client);
-      });
-      
-      // Движение к терминалу
-      this.atmClients.forEach(client => {
-        this.moveClient(client);
+      // Основная очередь
+      this.queuePositions = this.queuePositions.filter(client => {
+        if (Math.random() < this.leaveChance/5000 * (100 - client.patienceLevel)) {
+          this.makeClientLeave(client);
+          this.leftClients++;
+          return false;
+        }
+        return true;
       });
     },
     
-    moveClient(client) {
-      const dx = client.targetPosition.x - client.position.x;
-      const dy = client.targetPosition.y - client.position.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (distance > 2) {
-        client.position.x += dx * 0.1;
-        client.position.y += dy * 0.1;
-      }
+    waitForPosition(client) {
+      return new Promise(resolve => {
+        const check = () => {
+          const dx = client.position.x - client.targetPosition.x;
+          const dy = client.position.y - client.targetPosition.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance < 5) {
+            resolve();
+          } else {
+            setTimeout(check, 50);
+          }
+        };
+        check();
+      });
     },
     
     toggleCounter(counter) {
@@ -546,6 +681,10 @@ export default {
     },
     
     stopSimulation() {
+      if (this.animationFrame) {
+        cancelAnimationFrame(this.animationFrame);
+        this.animationFrame = null;
+      }
       this.intervals.forEach(clearInterval);
       this.intervals = [];
       this.isRunning = false;
@@ -561,271 +700,12 @@ export default {
       this.bank.isWindingDown = false;
       this.queuePositions = [];
       this.atmClients = [];
+      this.enteringClients = [];
+      this.leavingClients = [];
       this.randomEventActive = false;
+      this.lastUpdateTime = 0;
       this.initializeCounters();
     }
   }
 };
 </script>
-
-<style scoped>
-* {
-  box-sizing: border-box;
-}
-
-.bank-simulation {
-  font-family: Arial, sans-serif;
-  max-width: 1200px;
-  margin: 20px auto;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 10px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.1);
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 40px);
-}
-
-.controls {
-  margin: 20px 0;
-  padding: 20px;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 15px;
-}
-
-.slider-group {
-  margin-bottom: 0;
-}
-
-.slider-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: bold;
-}
-
-.slider-group input {
-  width: 100%;
-}
-
-.button-group {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 10px;
-}
-
-button {
-  padding: 10px 20px;
-  background: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-}
-
-button:hover {
-  background: #45a049;
-}
-
-button:disabled {
-  background: #cccccc;
-  cursor: not-allowed;
-}
-
-.stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  margin: 10px 0;
-  padding: 15px;
-  background: #e8f5e9;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.simulation-winding {
-  color: #FF9800;
-  font-weight: bold;
-}
-
-.simulation-finished {
-  color: #4CAF50;
-  font-weight: bold;
-}
-
-.random-event {
-  color: #2196F3;
-  font-weight: bold;
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  50% { opacity: 0.5; }
-}
-
-.bank-visualization {
-  position: relative;
-  width: 100%;
-  flex: 1;
-  min-height: 500px;
-  background-color: #f5f5f5;
-  border: 4px solid #333;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 0 15px rgba(0,0,0,0.2);
-}
-
-.bank-walls {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background-color: #f9f9f9;
-}
-
-.entrance-door {
-  position: absolute;
-  width: 40px;
-  height: 80px;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.service-window {
-  position: absolute;
-  width: 60px;
-  height: 90px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  z-index: 2;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-.vip-counter {
-  border: 2px solid gold;
-}
-
-.pensioner-counter {
-  border: 2px solid #FF9800;
-}
-
-.counter-closed {
-  background-color: #9E9E9E !important;
-}
-
-.counter-type {
-  font-size: 10px;
-  margin-top: 5px;
-  text-transform: capitalize;
-}
-
-.client {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transition: all 0.5s ease;
-  transform: translate(-50%, -50%);
-}
-
-.vip-client {
-  z-index: 3;
-}
-
-.pensioner-client {
-  z-index: 3;
-}
-
-.client-emoji {
-  font-size: 24px;
-}
-
-.client-status {
-  font-size: 10px;
-  margin-top: 2px;
-  white-space: nowrap;
-  text-transform: capitalize;
-}
-
-.emotion-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-top: 2px;
-}
-
-.emotion-indicator.neutral {
-  background-color: #4CAF50;
-}
-
-.emotion-indicator.annoyed {
-  background-color: #FFC107;
-}
-
-.emotion-indicator.angry {
-  background-color: #F44336;
-}
-
-.atm {
-  position: absolute;
-  font-size: 40px;
-  z-index: 1;
-  transform: translate(-50%, -50%);
-}
-
-.atm-client {
-  z-index: 2;
-}
-
-.serving-client {
-  opacity: 0.7;
-  transform: translate(-50%, -50%) scale(1.1);
-  z-index: 4;
-}
-
-.neutral {
-  filter: none;
-}
-
-.annoyed {
-  filter: sepia(0.5) saturate(2);
-}
-
-.angry {
-  filter: sepia(0.8) saturate(4) hue-rotate(-10deg);
-}
-
-@media (max-width: 768px) {
-  .bank-simulation {
-    margin: 10px;
-    padding: 10px;
-    height: auto;
-  }
-  
-  .controls {
-    grid-template-columns: 1fr;
-  }
-  
-  .bank-visualization {
-    min-height: 400px;
-  }
-}
-</style>
