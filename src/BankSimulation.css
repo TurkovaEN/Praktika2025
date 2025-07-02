@@ -113,27 +113,26 @@ button:disabled {
 }
 
 .bank-walls {
-  position: relative;
+  position: absolute;
   width: 100%;
   height: 100%;
+  background-color: #f9f9f9;
+  border: 2px solid #333;
 }
 
 .entrance-door {
   position: absolute;
-  width: 40px;
-  height: 80px;
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 1;
 }
 
 .atm {
   position: absolute;
+  left: 20%;
+  top: 80%;
   font-size: 40px;
   z-index: 1;
 }
@@ -152,6 +151,7 @@ button:disabled {
   cursor: pointer;
   border-radius: 5px;
   box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  background-color: #4CAF50;
 }
 
 .vip-counter {
@@ -249,7 +249,6 @@ button:disabled {
   opacity: 0.6;
 }
 
-/* Анимации для transition-group */
 .client-move {
   transition: all 0.5s ease;
 }
@@ -286,7 +285,6 @@ button:disabled {
   }
 }
 
-/* Адаптивность */
 @media (max-width: 768px) {
   .bank-simulation {
     padding: 10px;
