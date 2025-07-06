@@ -8,6 +8,9 @@ export class Bank {
     this.isWindingDown = false;
     this.vipQueue = [];
     this.pensionerQueue = [];
+    this.totalMoney = 1000000;
+    this.reputation = 100;
+    this.lastVipArrivalTime = 0;
   }
 }
 
@@ -41,6 +44,7 @@ export class Client {
     this.type = this.determineClientType();
     this.emotion = 'neutral';
     this.patienceLevel = 100;
+    this.isPanicking = false;
   }
 
   getRandomService() {

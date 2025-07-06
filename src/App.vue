@@ -21,16 +21,12 @@
         <input type="range" min="50" max="200" v-model.number="serviceSpeed" :disabled="isRunning">
       </div>
       <div class="slider-group">
-        <label>Интенсивность потока: {{ arrivalRate }} мс</label>
-        <input type="range" min="100" max="2000" step="50" v-model.number="arrivalRate" :disabled="isRunning">
+        <label>Частота появления: {{ arrivalFrequency }} сек</label>
+        <input type="range" min="0.1" max="5" step="0.1" v-model.number="arrivalFrequency" :disabled="isRunning || isRobberyInProgress">
       </div>
       <div class="slider-group">
         <label>Вероятность ухода: {{ leaveChance }}%</label>
         <input type="range" min="0" max="50" v-model.number="leaveChance" :disabled="isRunning">
-      </div>
-      <div class="slider-group">
-        <label>Доля VIP: {{ vipPercentage }}%</label>
-        <input type="range" min="0" max="30" v-model.number="vipPercentage" :disabled="isRunning">
       </div>
 
       <div class="slider-group">
@@ -38,19 +34,18 @@
         <input type="range" min="0" max="10" v-model.number="robberyChance" :disabled="isRunning">
       </div>
       <div class="slider-group">
-        <label>Охрана: {{ securityLevel }}%</label>
-        <input type="range" min="0" max="100" v-model.number="securityLevel" :disabled="isRunning">
+        <label>Охрана: {{ securityLevel }}</label>
+        <input type="range" min="0" max="5" v-model.number="securityLevel" :disabled="isRunning">
       </div>
       <div class="slider-group">
-        <label>Скорость полиции: {{ policeResponseTime }} мин</label>
-        <input type="range" min="1" max="10" v-model.number="policeResponseTime" :disabled="isRunning">
+        <label>Скорость полиции: {{ policeResponseTime }} сек</label>
+        <input type="range" min="10" max="60" v-model.number="policeResponseTime" :disabled="isRunning">
       </div>
 
       <div class="button-group">
         <button @click="startSimulation" :disabled="isRunning">Старт</button>
         <button @click="stopSimulation" :disabled="!isRunning">Стоп</button>
         <button @click="resetSimulation">Сброс</button>
-        <button @click="triggerRandomEvent" :disabled="!isRunning">Случайное событие</button>
         <button @click="triggerRobbery" :disabled="!isRunning || isRobberyInProgress">Начать ограбление</button>
       </div>
     </div>
@@ -64,7 +59,6 @@
       <div>Касса: {{ bank.totalMoney }} ₽</div>
       <div v-if="bank.isWindingDown" class="simulation-winding">Завершение работы...</div>
       <div v-if="simulationFinished" class="simulation-finished">Симуляция завершена!</div>
-      <div v-if="randomEventActive" class="random-event">Событие: {{ randomEventText }}</div>
       <div v-if="isRobberyInProgress" class="robbery-alert">
         ⚠️ ОГРАБЛЕНИЕ! Полиция прибудет через {{ policeArrivalTime }} сек
       </div>
@@ -208,82 +202,8 @@
 </template>
 
 <script>
-export class Bank {
-  constructor(maxCapacity) {
-    this.maxCapacity = maxCapacity;
-    this.clients = [];
-    this.counters = [];
-    this.totalServed = 0;
-    this.isWindingDown = false;
-    this.vipQueue = [];
-    this.pensionerQueue = [];
-    this.totalMoney = 1000000;
-    this.reputation = 100;
-  }
-}
-
-export class Counter {
-  constructor(id, processTime, type = 'regular') {
-    this.id = id;
-    this.processTime = processTime;
-    this.currentClient = null;
-    this.isAvailable = true;
-    this.position = { x: 0, y: 0 };
-    this.type = type;
-    this.isWorking = true;
-  }
-}
-
-export class Client {
-  static nextId = 1;
-  
-  constructor() {
-    this.id = Client.nextId++;
-    this.position = { x: 0, y: 0 };
-    this.targetPosition = null;
-    this.speed = 0.5 + Math.random();
-    this.isWaiting = false;
-    this.patience = 20000 + Math.random() * 30000;
-    this.enteredTime = Date.now();
-    this.isLeaving = false;
-    this.served = false;
-    this.serviceType = this.getRandomService();
-    this.serviceTime = this.calculateServiceTime();
-    this.type = this.determineClientType();
-    this.emotion = 'neutral';
-    this.patienceLevel = 100;
-  }
-
-  getRandomService() {
-    const services = ['deposit', 'credit', 'payment', 'consultation'];
-    return services[Math.floor(Math.random() * services.length)];
-  }
-
-  calculateServiceTime() {
-    switch(this.serviceType) {
-      case 'credit': return 8000 + Math.random() * 5000;
-      case 'deposit': return 5000 + Math.random() * 3000;
-      case 'consultation': return 6000 + Math.random() * 4000;
-      default: return 2000 + Math.random() * 2000;
-    }
-  }
-
-  determineClientType() {
-    const rand = Math.random();
-    if (rand < 0.1) return 'vip';
-    if (rand < 0.3) return 'pensioner';
-    return 'regular';
-  }
-
-  updateEmotion() {
-    const waitTime = Date.now() - this.enteredTime;
-    this.patienceLevel = Math.max(0, 100 - (waitTime / this.patience) * 100);
-    
-    if (this.patienceLevel < 20) this.emotion = 'angry';
-    else if (this.patienceLevel < 50) this.emotion = 'annoyed';
-    else this.emotion = 'neutral';
-  }
-}
+import { Bank, Counter, Client } from './Bank.js';
+import './BankSimulation.css';
 
 export default {
   data() {
@@ -293,9 +213,9 @@ export default {
       vipCounterCount: 1,
       pensionerCounterCount: 1,
       serviceSpeed: 100,
-      arrivalRate: 500,
+      arrivalFrequency: 1,
       leaveChance: 10,
-      vipPercentage: 10,
+      vipFrequency: 10,
       isRunning: false,
       simulationFinished: false,
       intervals: [],
@@ -309,8 +229,6 @@ export default {
       leavingClients: [],
       servingClients: [],
       atmBroken: false,
-      randomEventActive: false,
-      randomEventText: '',
       vipQueuePosition: { x: 0, y: 0 },
       pensionerQueuePosition: { x: 0, y: 0 },
       mainQueuePosition: { x: 0, y: 0 },
@@ -318,15 +236,17 @@ export default {
       entrancePosition: { x: 0, y: 0 },
       exitPosition: { x: 0, y: 0 },
       robberyChance: 1,
-      securityLevel: 30,
-      policeResponseTime: 3,
+      securityLevel: 2,
+      policeResponseTime: 30,
       isRobberyInProgress: false,
       isRobberyAlarm: false,
       policeArrivalTime: 0,
       robbers: [],
       guards: [],
       robberyResult: null,
-      robberyCheckInterval: null
+      robberyCheckInterval: null,
+      originalArrivalRate: 500,
+      isVipProcessing: false,
     };
   },
   computed: {
@@ -354,9 +274,6 @@ export default {
         top: this.atmPosition.y + 'px',
         transform: 'translate(-50%, -50%)'
       };
-    },
-    guardsCount() {
-      return Math.floor(this.securityLevel / 20);
     }
   },
   watch: {
@@ -373,6 +290,9 @@ export default {
     },
     pensionerCounterCount() {
       this.initializeCounters();
+    },
+    securityLevel() {
+      this.initializeGuards();
     }
   },
   mounted() {
@@ -389,6 +309,7 @@ export default {
   beforeUnmount() {
     window.removeEventListener('resize', this.setupBankDimensions);
     clearInterval(this.robberyCheckInterval);
+    if (this.vipInterval) clearInterval(this.vipInterval);
   },
   methods: {
     getClientEmoji(client) {
@@ -462,19 +383,51 @@ export default {
 
       this.animationFrame = requestAnimationFrame(animate);
 
-      this.intervals.push(setInterval(() => {
-        if (this.bank.isWindingDown) return;
+      // Общий интервал для всех клиентов
+      const clientInterval = setInterval(() => {
+        if (this.bank.isWindingDown || this.isRobberyInProgress) return;
+        
+        if (this.totalClients >= this.bank.maxCapacity) return;
+
+        // Сначала проверяем VIP-клиентов
+        const availableVipCounters = this.bank.counters.filter(c => 
+          c.type === 'vip' && c.isAvailable && c.isWorking
+        );
+        
+        // С шансом 10% создаем VIP-клиента, если есть свободные VIP-окна
+        if (availableVipCounters.length > 0 && Math.random() < 0.1) {
+          const client = new Client();
+          client.type = 'vip';
+          client.position = { x: this.entrancePosition.x - 40, y: this.entrancePosition.y };
+          client.targetPosition = { ...this.entrancePosition };
+          this.enteringClients.push(client);
+          this.totalEntered++;
+          
+          setTimeout(() => {
+            this.enteringClients = this.enteringClients.filter(c => c.id !== client.id);
+            const counter = availableVipCounters[0];
+            this.serveVipClient(client, counter);
+          }, 1000);
+          return; // Выходим, чтобы не создавать обычного клиента в этом цикле
+        }
+
+        // Обычные клиенты (включая пенсионеров)
         const client = new Client();
-        if (Math.random() < this.vipPercentage / 100) client.type = 'vip';
+        if (Math.random() < 0.3) client.type = 'pensioner';
+        else client.type = 'regular';
+        
         client.position = { x: this.entrancePosition.x - 40, y: this.entrancePosition.y };
         client.targetPosition = { ...this.entrancePosition };
         this.enteringClients.push(client);
         this.totalEntered++;
+        
         setTimeout(() => {
           this.assignClientToQueue(client);
           this.enteringClients = this.enteringClients.filter(c => c.id !== client.id);
         }, 1000);
-      }, this.arrivalRate));
+      }, this.arrivalFrequency * 1000); // Используем arrivalFrequency для регулирования частоты
+
+      this.intervals.push(clientInterval);
 
       this.intervals.push(setInterval(() => {
         this.serveQueues();
@@ -484,15 +437,28 @@ export default {
         this.checkLeavingClients();
       }, 500));
     },
+    serveVipClient(client, counter) {
+      counter.isAvailable = false;
+      counter.currentClient = client;
+      client.isServing = true;
+      this.servingClients.push(client);
+      client.targetPosition = { x: counter.position.x - 30, y: counter.position.y };
+      
+      this.waitForPosition(client).then(() => {
+        return new Promise(resolve => setTimeout(resolve, client.serviceTime * (100 / this.serviceSpeed)));
+      }).then(() => {
+        client.targetPosition = { ...this.exitPosition };
+        return this.waitForPosition(client);
+      }).then(() => {
+        counter.isAvailable = true;
+        counter.currentClient = null;
+        this.servingClients = this.servingClients.filter(c => c.id !== client.id);
+        this.bank.totalServed++;
+        this.makeClientLeave(client);
+      });
+    },
     assignClientToQueue(client) {
-      if (client.type === 'vip') {
-        if (this.hasSpecialCounters('vip') || !this.hasSpecialCounters('regular')) {
-          this.bank.vipQueue.push(client);
-          client.targetPosition = { x: this.vipQueuePosition.x - (this.bank.vipQueue.length - 1) * 30, y: this.vipQueuePosition.y };
-        } else {
-          this.addToRegularQueue(client);
-        }
-      } else if (client.type === 'pensioner') {
+      if (client.type === 'pensioner') {
         if (this.hasSpecialCounters('pensioner') || !this.hasSpecialCounters('regular')) {
           this.bank.pensionerQueue.push(client);
           client.targetPosition = { x: this.pensionerQueuePosition.x - (this.bank.pensionerQueue.length - 1) * 30, y: this.pensionerQueuePosition.y };
@@ -511,18 +477,17 @@ export default {
     updateClients(deltaTime) {
       const speedFactor = deltaTime / 16;
       this.enteringClients.forEach(client => this.moveClient(client, speedFactor));
-      this.bank.vipQueue.forEach((client, index) => {
-        client.targetPosition = { x: this.vipQueuePosition.x - index * 30, y: this.vipQueuePosition.y };
-        this.moveClient(client, speedFactor);
-        client.updateEmotion();
-      });
       this.bank.pensionerQueue.forEach((client, index) => {
-        client.targetPosition = { x: this.pensionerQueuePosition.x - index * 30, y: this.pensionerQueuePosition.y };
+        if (!this.isRobberyInProgress || client.isPanicking) {
+          client.targetPosition = { x: this.pensionerQueuePosition.x - index * 30, y: this.pensionerQueuePosition.y };
+        }
         this.moveClient(client, speedFactor);
         client.updateEmotion();
       });
       this.queuePositions.forEach((client, index) => {
-        client.targetPosition = { x: this.mainQueuePosition.x - index * 30, y: this.mainQueuePosition.y };
+        if (!this.isRobberyInProgress || client.isPanicking) {
+          client.targetPosition = { x: this.mainQueuePosition.x - index * 30, y: this.mainQueuePosition.y };
+        }
         this.moveClient(client, speedFactor);
         client.updateEmotion();
       });
@@ -542,6 +507,15 @@ export default {
       }
     },
     moveClient(client, speedFactor = 1) {
+      if (this.isRobberyInProgress && !client.isPanicking) {
+        client.isPanicking = true;
+        client.targetPosition = {
+          x: Math.random() * this.$refs.bankArea.clientWidth,
+          y: Math.random() * this.$refs.bankArea.clientHeight
+        };
+        client.speed = 2 + Math.random();
+      }
+
       const dx = client.targetPosition.x - client.position.x;
       const dy = client.targetPosition.y - client.position.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
@@ -549,17 +523,17 @@ export default {
         const speed = client.speed * speedFactor;
         client.position.x += dx * 0.05 * speed;
         client.position.y += dy * 0.05 * speed;
+      } else if (this.isRobberyInProgress && client.isPanicking) {
+        client.targetPosition = {
+          x: Math.random() * this.$refs.bankArea.clientWidth,
+          y: Math.random() * this.$refs.bankArea.clientHeight
+        };
       } else {
         client.position = { ...client.targetPosition };
       }
     },
     serveQueues() {
-      const availableVip = this.bank.counters.find(c => c.type === 'vip' && c.isAvailable && c.isWorking);
-      if (availableVip && this.bank.vipQueue.length > 0) {
-        const client = this.bank.vipQueue.shift();
-        this.serveClient(client, availableVip);
-        return;
-      }
+      if (this.isRobberyInProgress) return;
 
       const availablePensioner = this.bank.counters.find(c => c.type === 'pensioner' && c.isAvailable && c.isWorking);
       if (availablePensioner && this.bank.pensionerQueue.length > 0) {
@@ -569,11 +543,6 @@ export default {
       }
 
       const availableRegular = this.bank.counters.find(c => c.type === 'regular' && c.isAvailable && c.isWorking);
-      if (!this.hasSpecialCounters('vip') && this.bank.vipQueue.length > 0) {
-        const client = this.bank.vipQueue.shift();
-        this.serveClient(client, availableRegular);
-        return;
-      }
       if (!this.hasSpecialCounters('pensioner') && this.bank.pensionerQueue.length > 0) {
         const client = this.bank.pensionerQueue.shift();
         this.serveClient(client, availableRegular);
@@ -631,15 +600,6 @@ export default {
       await this.waitForPosition(client);
     },
     checkLeavingClients() {
-      this.bank.vipQueue = this.bank.vipQueue.filter(client => {
-        if (Math.random() < this.leaveChance / 10000 * (100 - client.patienceLevel)) {
-          this.makeClientLeave(client);
-          this.leftClients++;
-          return false;
-        }
-        return true;
-      });
-
       this.bank.pensionerQueue = this.bank.pensionerQueue.filter(client => {
         if (Math.random() < this.leaveChance / 8000 * (100 - client.patienceLevel)) {
           this.makeClientLeave(client);
@@ -679,24 +639,6 @@ export default {
         }
       }
     },
-    triggerRandomEvent() {
-      const events = [
-        { text: "Терминал сломался!", action: () => { this.atmBroken = true; } },
-        { text: "Терминал починился!", action: () => { this.atmBroken = false; } },
-        { text: "Наплыв клиентов!", action: () => { this.arrivalRate = Math.max(100, this.arrivalRate - 200); } },
-        { text: "Сотрудник заболел", action: () => {
-          const workingCounters = this.bank.counters.filter(c => c.isWorking);
-          if (workingCounters.length > 1) workingCounters[0].isWorking = false;
-        }}
-      ];
-      const event = events[Math.floor(Math.random() * events.length)];
-      this.randomEventText = event.text;
-      this.randomEventActive = true;
-      event.action();
-      setTimeout(() => {
-        this.randomEventActive = false;
-      }, 3000);
-    },
     stopSimulation() {
       if (this.animationFrame) {
         cancelAnimationFrame(this.animationFrame);
@@ -704,6 +646,8 @@ export default {
       }
       this.intervals.forEach(clearInterval);
       this.intervals = [];
+      if (this.vipInterval) clearInterval(this.vipInterval);
+      this.vipInterval = null;
       this.isRunning = false;
     },
     resetSimulation() {
@@ -719,7 +663,6 @@ export default {
       this.enteringClients = [];
       this.leavingClients = [];
       this.servingClients = [];
-      this.randomEventActive = false;
       this.lastUpdateTime = 0;
       this.isRobberyInProgress = false;
       this.isRobberyAlarm = false;
@@ -732,7 +675,7 @@ export default {
       this.guards = [];
       const bankRect = this.$refs.bankArea?.getBoundingClientRect();
       if (!bankRect) return;
-      for (let i = 0; i < this.guardsCount; i++) {
+      for (let i = 0; i < this.securityLevel; i++) {
         this.guards.push({
           id: i + 1,
           position: {
@@ -743,10 +686,10 @@ export default {
       }
     },
     checkRobberyConditions() {
-      const angryClients = [...this.bank.vipQueue, ...this.bank.pensionerQueue, ...this.queuePositions]
+      const angryClients = [...this.bank.pensionerQueue, ...this.queuePositions]
         .filter(c => c.emotion === 'angry').length;
       const overloadFactor = this.totalClients / this.bank.maxCapacity;
-      const securityFactor = 1 - this.securityLevel / 100;
+      const securityFactor = 1 - this.securityLevel / 5;
       const robberyProbability = this.robberyChance / 100 *
         (1 + angryClients * 0.1 + overloadFactor * 0.5 + securityFactor * 0.5);
       return Math.random() < robberyProbability;
@@ -755,7 +698,7 @@ export default {
       if (this.isRobberyInProgress) return;
       this.isRobberyInProgress = true;
       this.isRobberyAlarm = true;
-      this.policeArrivalTime = this.policeResponseTime * 60;
+      this.policeArrivalTime = this.policeResponseTime;
       const bankRect = this.$refs.bankArea.getBoundingClientRect();
       const robberCount = 1 + Math.floor(Math.random() * 2);
       for (let i = 0; i < robberCount; i++) {
@@ -768,6 +711,18 @@ export default {
           counterId: null
         });
       }
+
+      this.originalArrivalRate = this.arrivalFrequency;
+      this.arrivalFrequency = 0;
+
+      [...this.bank.pensionerQueue, ...this.queuePositions, ...this.atmClients, ...this.servingClients].forEach(client => {
+        client.isPanicking = true;
+        client.targetPosition = {
+          x: Math.random() * bankRect.width,
+          y: Math.random() * bankRect.height
+        };
+        client.speed = 2 + Math.random();
+      });
 
       const policeTimer = setInterval(() => {
         this.policeArrivalTime--;
@@ -787,21 +742,6 @@ export default {
           const targetCounter = availableCounters[Math.floor(Math.random() * availableCounters.length)];
           robber.counterId = targetCounter.id;
           robber.targetPosition = { x: targetCounter.position.x - 40, y: targetCounter.position.y };
-        }
-      });
-      this.panicClients();
-      if (this.guards.length > 0) this.guardsResponse();
-    },
-    panicClients() {
-      [...this.bank.vipQueue, ...this.bank.pensionerQueue, ...this.queuePositions].forEach(client => {
-        if (Math.random() < 0.3) {
-          client.targetPosition = {
-            x: this.entrancePosition.x - 100,
-            y: client.position.y + (Math.random() * 200 - 100)
-          };
-          client.speed = 2;
-        } else if (Math.random() < 0.2) {
-          client.speed = 0.1;
         }
       });
     },
@@ -863,6 +803,12 @@ export default {
         }
       });
       this.calculateRobberyResult();
+      
+      this.arrivalFrequency = this.originalArrivalRate;
+      [...this.bank.pensionerQueue, ...this.queuePositions, ...this.atmClients, ...this.servingClients].forEach(client => {
+        client.isPanicking = false;
+        client.speed = 0.5 + Math.random();
+      });
     },
     calculateRobberyResult() {
       const caught = this.robbers.filter(r => r.status === 'caught').length;
@@ -896,368 +842,3 @@ export default {
   }
 };
 </script>
-
-<style>
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-.bank-simulation {
-  font-family: Arial, sans-serif;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: #f5f5f5;
-}
-
-.controls {
-  margin: 10px 0;
-  padding: 15px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 15px;
-}
-
-.slider-group {
-  margin-bottom: 0;
-}
-
-.slider-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.slider-group input {
-  width: 100%;
-}
-
-.button-group {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 10px;
-}
-
-button {
-  padding: 8px 16px;
-  background: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-}
-
-button:hover {
-  background: #45a049;
-}
-
-button:disabled {
-  background: #cccccc;
-  cursor: not-allowed;
-}
-
-.stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 10px 0;
-  padding: 10px;
-  background: #e8f5e9;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.simulation-winding {
-  color: #FF9800;
-  font-weight: bold;
-}
-
-.simulation-finished {
-  color: #4CAF50;
-  font-weight: bold;
-}
-
-.random-event {
-  color: #2196F3;
-  font-weight: bold;
-  animation: blink 1s infinite;
-}
-
-.robbery-alert {
-  color: #F44336;
-  font-weight: bold;
-  animation: blink 0.5s infinite;
-}
-
-.robbery-result {
-  padding: 5px;
-  border-radius: 4px;
-  margin-top: 5px;
-  text-align: center;
-}
-
-.robbery-result.success {
-  background-color: #E8F5E9;
-  color: #4CAF50;
-}
-
-.robbery-result.failure {
-  background-color: #FFEBEE;
-  color: #F44336;
-}
-
-@keyframes blink {
-  50% { opacity: 0.5; }
-}
-
-.bank-visualization {
-  position: relative;
-  width: 100%;
-  flex: 1;
-  min-height: 500px;
-  background-color: #f9f9f9;
-  border: 3px solid #333;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 0 15px rgba(0,0,0,0.1);
-}
-
-.robbery-alert-bg {
-  animation: robberyAlert 1s infinite;
-}
-
-@keyframes robberyAlert {
-  0% { background-color: #f9f9f9; }
-  50% { background-color: #ffcccc; }
-  100% { background-color: #f9f9f9; }
-}
-
-.bank-walls {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background-color: #f9f9f9;
-  border: 2px solid #333;
-}
-
-.entrance-door {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 30px;
-  z-index: 1;
-}
-
-.atm {
-  position: absolute;
-  left: 20%;
-  top: 80%;
-  font-size: 40px;
-  z-index: 1;
-}
-
-.service-window {
-  position: absolute;
-  width: 60px;
-  height: 90px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  z-index: 2;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border-radius: 5px;
-  box-shadow: 0 0 5px rgba(0,0,0,0.2);
-  background-color: #4CAF50;
-}
-
-.vip-counter {
-  border: 2px solid gold;
-  background-color: #FFF9C4 !important;
-}
-
-.pensioner-counter {
-  border: 2px solid #FF9800;
-  background-color: #FFE0B2 !important;
-}
-
-.counter-closed {
-  background-color: #9E9E9E !important;
-}
-
-.counter-type {
-  font-size: 10px;
-  margin-top: 5px;
-  text-transform: capitalize;
-}
-
-.client {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transition: all 0.5s ease;
-  z-index: 3;
-}
-
-.vip-client {
-  z-index: 4;
-}
-
-.pensioner-client {
-  z-index: 4;
-}
-
-.client-emoji {
-  font-size: 24px;
-  display: inline-block;
-  animation: walk 0.5s infinite alternate;
-}
-
-@keyframes walk {
-  from { transform: translateY(0); }
-  to { transform: translateY(-3px); }
-}
-
-.serving-client .client-emoji {
-  animation: serve 1s infinite;
-}
-
-@keyframes serve {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-
-.client-status {
-  font-size: 10px;
-  margin-top: 2px;
-  white-space: nowrap;
-  text-transform: capitalize;
-}
-
-.emotion-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-top: 2px;
-}
-
-.emotion-indicator.neutral {
-  background-color: #4CAF50;
-}
-
-.emotion-indicator.annoyed {
-  background-color: #FFC107;
-}
-
-.emotion-indicator.angry {
-  background-color: #F44336;
-}
-
-.entering-client {
-  z-index: 5;
-  opacity: 0.8;
-}
-
-.leaving-client {
-  z-index: 5;
-  opacity: 0.6;
-}
-
-.client-move {
-  transition: all 0.5s ease;
-}
-
-.client-enter-active {
-  transition: all 0.5s ease;
-  animation: enter 0.5s;
-}
-
-.client-leave-active {
-  transition: all 0.5s ease;
-  animation: leave 0.5s reverse;
-}
-
-@keyframes enter {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.5);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes leave {
-  from {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.5);
-  }
-}
-
-.robber {
-  position: absolute;
-  width: 40px;
-  height: 40px;
-  z-index: 10;
-  transition: all 0.3s ease;
-}
-
-.robber-emoji {
-  font-size: 30px;
-  display: block;
-  text-align: center;
-}
-
-.guard {
-  position: absolute;
-  width: 35px;
-  height: 35px;
-  z-index: 9;
-  transition: all 0.3s ease;
-}
-
-.guard-emoji {
-  font-size: 25px;
-  display: block;
-  text-align: center;
-}
-
-@media (max-width: 768px) {
-  .bank-simulation {
-    padding: 10px;
-    height: auto;
-  }
-  
-  .controls {
-    grid-template-columns: 1fr;
-  }
-  
-  .bank-visualization {
-    min-height: 400px;
-  }
-}
-</style>
