@@ -63,7 +63,6 @@ export class Client {
 
   determineClientType() {
     const rand = Math.random();
-    if (rand < 0.1) return 'vip';
     if (rand < 0.3) return 'pensioner';
     return 'regular';
   }
@@ -75,5 +74,19 @@ export class Client {
     if (this.patienceLevel < 20) this.emotion = 'angry';
     else if (this.patienceLevel < 50) this.emotion = 'annoyed';
     else this.emotion = 'neutral';
+  }
+}
+
+export class VipClient extends Client {
+  constructor() {
+    super();
+    this.type = 'vip';
+    this.patience = 30000 + Math.random() * 20000; // VIP клиенты более терпеливы
+    this.serviceTime = this.calculateServiceTime() * 0.8; // VIP клиентов обслуживают быстрее
+  }
+
+  getRandomService() {
+    const services = ['credit', 'consultation', 'investment']; // VIP клиенты чаще используют премиальные услуги
+    return services[Math.floor(Math.random() * services.length)];
   }
 }

@@ -202,7 +202,7 @@
 </template>
 
 <script>
-import { Bank, Counter, Client } from './Bank.js';
+import { Bank, Counter, Client, VipClient } from './Bank.js';
 import './BankSimulation.css';
 
 export default {
