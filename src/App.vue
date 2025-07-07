@@ -2,69 +2,71 @@
   <div class="bank-simulation">
     <h1>Банковская симуляция</h1>
 
-    <div class="controls">
-      <div class="slider-group">
-        <label>Окон всего: {{ counterCount }}</label>
-        <input type="range" min="1" max="10" v-model.number="counterCount" :disabled="isRunning">
-      </div>
-      <div class="slider-group">
-        <label>VIP окон: {{ vipCounterCount }}</label>
-        <input type="range" min="0" :max="counterCount" v-model.number="vipCounterCount" :disabled="isRunning">
-      </div>
-      <div class="slider-group">
-        <label>Окон для пенсионеров: {{ pensionerCounterCount }}</label>
-        <input type="range" min="0" :max="counterCount - vipCounterCount" v-model.number="pensionerCounterCount"
-          :disabled="isRunning">
-      </div>
-      <div class="slider-group">
-        <label>Скорость обслуживания: {{ serviceSpeed }}%</label>
-        <input type="range" min="50" max="200" v-model.number="serviceSpeed" :disabled="isRunning">
-      </div>
-      <div class="slider-group">
-        <label>Частота появления: {{ arrivalFrequency }} сек</label>
-        <input type="range" min="0.1" max="5" step="0.1" v-model.number="arrivalFrequency" :disabled="isRunning || isRobberyInProgress">
-      </div>
-      <div class="slider-group">
-        <label>Вероятность ухода: {{ leaveChance }}%</label>
-        <input type="range" min="0" max="50" v-model.number="leaveChance" :disabled="isRunning">
-      </div>
-
-      <div class="slider-group">
-        <label>Шанс ограбления: {{ robberyChance }}%</label>
-        <input type="range" min="0" max="10" v-model.number="robberyChance" :disabled="isRunning">
-      </div>
-      <div class="slider-group">
-        <label>Охрана: {{ securityLevel }}</label>
-        <input type="range" min="0" max="5" v-model.number="securityLevel" :disabled="isRunning">
-      </div>
-      <div class="slider-group">
-        <label>Скорость полиции: {{ policeResponseTime }} сек</label>
-        <input type="range" min="10" max="60" v-model.number="policeResponseTime" :disabled="isRunning">
-      </div>
-
-      <div class="button-group">
-        <button @click="startSimulation" :disabled="isRunning">Старт</button>
-        <button @click="stopSimulation" :disabled="!isRunning">Стоп</button>
-        <button @click="resetSimulation">Сброс</button>
-        <button @click="triggerRobbery" :disabled="!isRunning || isRobberyInProgress">Начать ограбление</button>
-      </div>
+   <div class="controls">
+  <div class="left-column">
+    <div class="slider-group">
+      <label>Окон всего: {{ counterCount }}</label>
+      <input type="range" min="1" max="10" v-model.number="counterCount" :disabled="isRunning">
     </div>
+    <div class="slider-group">
+      <label>VIP окон: {{ vipCounterCount }}</label>
+      <input type="range" min="0" :max="counterCount" v-model.number="vipCounterCount" :disabled="isRunning">
+    </div>
+    <div class="slider-group">
+      <label>Окон для пенсионеров: {{ pensionerCounterCount }}</label>
+      <input type="range" min="0" :max="counterCount - vipCounterCount" v-model.number="pensionerCounterCount"
+        :disabled="isRunning">
+    </div>
+    <div class="slider-group">
+      <label>Скорость обслуживания: {{ serviceSpeed }}%</label>
+      <input type="range" min="50" max="200" v-model.number="serviceSpeed" :disabled="isRunning">
+    </div>
+    <div class="slider-group">
+      <label>Частота появления: {{ arrivalFrequency }} сек</label>
+      <input type="range" min="0.1" max="5" step="0.1" v-model.number="arrivalFrequency" :disabled="isRunning || isRobberyInProgress">
+    </div>
+    <div class="slider-group">
+      <label>Вероятность ухода: {{ leaveChance }}%</label>
+      <input type="range" min="0" max="50" v-model.number="leaveChance" :disabled="isRunning">
+    </div>
+    <div class="slider-group">
+      <label>Скорость полиции: {{ policeResponseTime }} сек</label>
+      <input type="range" min="10" max="60" v-model.number="policeResponseTime" :disabled="isRunning">
+    </div>
+  </div>
+  
+  <div class="right-column">
+    <div class="slider-group">
+      <label>Шанс ограбления: {{ robberyChance }}%</label>
+      <input type="range" min="0" max="10" v-model.number="robberyChance" :disabled="isRunning">
+    </div>
+    <div class="slider-group">
+      <label>Охрана: {{ securityLevel }}</label>
+      <input type="range" min="0" max="5" v-model.number="securityLevel" :disabled="isRunning">
+    </div>
+  </div>
+
+  <div class="button-group">
+    <button @click="startSimulation" :disabled="isRunning">Старт</button>
+    <button @click="stopSimulation" :disabled="!isRunning">Стоп</button>
+    <button @click="resetSimulation">Сброс</button>
+    <button @click="triggerRobbery" :disabled="!isRunning || isRobberyInProgress">Начать ограбление</button>
+  </div>
+</div>
 
     <div class="stats">
       <div>Клиентов: {{ totalClients }}</div>
       <div>Обслужено: {{ bank.totalServed }}</div>
       <div>Свободных окон: {{ availableCounters }}</div>
       <div>Ушло клиентов: {{ leftClients }}</div>
-      <div>Репутация: {{ bank.reputation }}%</div>
-      <div>Касса: {{ bank.totalMoney }} ₽</div>
+
       <div v-if="bank.isWindingDown" class="simulation-winding">Завершение работы...</div>
       <div v-if="simulationFinished" class="simulation-finished">Симуляция завершена!</div>
       <div v-if="isRobberyInProgress" class="robbery-alert">
         ⚠️ ОГРАБЛЕНИЕ! Полиция прибудет через {{ policeArrivalTime }} сек
       </div>
       <div v-if="robberyResult" :class="['robbery-result', robberyResult.success ? 'success' : 'failure']">
-        {{ robberyResult.message }}<br>
-        Убытки: {{ robberyResult.losses }} ₽
+        {{ robberyResult.message }}
       </div>
     </div>
 
@@ -215,7 +217,6 @@ export default {
       serviceSpeed: 100,
       arrivalFrequency: 1,
       leaveChance: 10,
-      vipFrequency: 10,
       isRunning: false,
       simulationFinished: false,
       intervals: [],
@@ -244,9 +245,7 @@ export default {
       robbers: [],
       guards: [],
       robberyResult: null,
-      robberyCheckInterval: null,
-      originalArrivalRate: 500,
-      isVipProcessing: false,
+      originalArrivalRate: 1
     };
   },
   computed: {
@@ -310,6 +309,8 @@ export default {
     window.removeEventListener('resize', this.setupBankDimensions);
     clearInterval(this.robberyCheckInterval);
     if (this.vipInterval) clearInterval(this.vipInterval);
+    Client.resetIdCounter();
+    VipClient.resetIdCounter();
   },
   methods: {
     getClientEmoji(client) {
@@ -365,6 +366,8 @@ export default {
       });
     },
     startSimulation() {
+      if (this.isRunning) return;
+      
       this.resetSimulation();
       this.isRunning = true;
       this.simulationFinished = false;
@@ -383,18 +386,20 @@ export default {
 
       this.animationFrame = requestAnimationFrame(animate);
 
-      // Общий интервал для всех клиентов
+      let lastClientTime = 0;
       const clientInterval = setInterval(() => {
         if (this.bank.isWindingDown || this.isRobberyInProgress) return;
         
         if (this.totalClients >= this.bank.maxCapacity) return;
 
-        // Сначала проверяем VIP-клиентов
+        const now = Date.now();
+        if (now - lastClientTime < this.arrivalFrequency * 1000) return;
+        lastClientTime = now;
+
         const availableVipCounters = this.bank.counters.filter(c => 
           c.type === 'vip' && c.isAvailable && c.isWorking
         );
         
-        // С шансом 10% создаем VIP-клиента, если есть свободные VIP-окна
         if (availableVipCounters.length > 0 && Math.random() < 0.1) {
           const client = new Client();
           client.type = 'vip';
@@ -408,10 +413,9 @@ export default {
             const counter = availableVipCounters[0];
             this.serveVipClient(client, counter);
           }, 1000);
-          return; // Выходим, чтобы не создавать обычного клиента в этом цикле
+          return;
         }
 
-        // Обычные клиенты (включая пенсионеров)
         const client = new Client();
         if (Math.random() < 0.3) client.type = 'pensioner';
         else client.type = 'regular';
@@ -425,7 +429,7 @@ export default {
           this.assignClientToQueue(client);
           this.enteringClients = this.enteringClients.filter(c => c.id !== client.id);
         }, 1000);
-      }, this.arrivalFrequency * 1000); // Используем arrivalFrequency для регулирования частоты
+      }, 100);
 
       this.intervals.push(clientInterval);
 
@@ -507,11 +511,14 @@ export default {
       }
     },
     moveClient(client, speedFactor = 1) {
+      const bankRect = this.$refs.bankArea?.getBoundingClientRect();
+      if (!bankRect) return;
+
       if (this.isRobberyInProgress && !client.isPanicking) {
         client.isPanicking = true;
         client.targetPosition = {
-          x: Math.random() * this.$refs.bankArea.clientWidth,
-          y: Math.random() * this.$refs.bankArea.clientHeight
+          x: Math.random() * (bankRect.width - 50) + 25,
+          y: Math.random() * (bankRect.height - 50) + 25
         };
         client.speed = 2 + Math.random();
       }
@@ -519,14 +526,18 @@ export default {
       const dx = client.targetPosition.x - client.position.x;
       const dy = client.targetPosition.y - client.position.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
+      
       if (distance > 2) {
         const speed = client.speed * speedFactor;
         client.position.x += dx * 0.05 * speed;
         client.position.y += dy * 0.05 * speed;
+        
+        client.position.x = Math.max(10, Math.min(bankRect.width - 10, client.position.x));
+        client.position.y = Math.max(10, Math.min(bankRect.height - 10, client.position.y));
       } else if (this.isRobberyInProgress && client.isPanicking) {
         client.targetPosition = {
-          x: Math.random() * this.$refs.bankArea.clientWidth,
-          y: Math.random() * this.$refs.bankArea.clientHeight
+          x: Math.random() * (bankRect.width - 50) + 25,
+          y: Math.random() * (bankRect.height - 50) + 25
         };
       } else {
         client.position = { ...client.targetPosition };
@@ -651,25 +662,48 @@ export default {
       this.isRunning = false;
     },
     resetSimulation() {
-      this.stopSimulation();
+            this.stopSimulation();
+      
+      // Полностью сбрасываем все состояния
       this.bank = new Bank(50);
-      this.bank.totalServed = 0;
-      this.totalEntered = 0;
-      this.leftClients = 0;
-      this.simulationFinished = false;
-      this.bank.isWindingDown = false;
-      this.queuePositions = [];
-      this.atmClients = [];
+      Client.resetIdCounter();
+      VipClient.resetIdCounter();
+      
+      // Очищаем все массивы клиентов
       this.enteringClients = [];
       this.leavingClients = [];
       this.servingClients = [];
-      this.lastUpdateTime = 0;
+      this.atmClients = [];
+      this.queuePositions = [];
+      this.bank.vipQueue = [];
+      this.bank.pensionerQueue = [];
+      
+      // Сбрасываем всю статистику
+      this.bank.totalServed = 0;
+      this.totalEntered = 0;
+      this.leftClients = 0;
+      
+      // Сбрасываем состояние симуляции
+      this.simulationFinished = false;
+      this.bank.isWindingDown = false;
+      
+      // Сбрасываем состояние ограбления
       this.isRobberyInProgress = false;
       this.isRobberyAlarm = false;
       this.robbers = [];
       this.guards = [];
       this.robberyResult = null;
+      this.policeArrivalTime = 0;
+      this.arrivalFrequency = this.originalArrivalRate;
+      
+      // Переинициализируем кассы и охранников
       this.initializeCounters();
+      this.initializeGuards();
+      
+      // Обновляем позиции элементов
+      this.$nextTick(() => {
+        this.positionCounters();
+      });
     },
     initializeGuards() {
       this.guards = [];
@@ -718,8 +752,8 @@ export default {
       [...this.bank.pensionerQueue, ...this.queuePositions, ...this.atmClients, ...this.servingClients].forEach(client => {
         client.isPanicking = true;
         client.targetPosition = {
-          x: Math.random() * bankRect.width,
-          y: Math.random() * bankRect.height
+          x: Math.random() * (bankRect.width - 50) + 25, 
+          y: Math.random() * (bankRect.height - 50) + 25
         };
         client.speed = 2 + Math.random();
       });
@@ -814,14 +848,9 @@ export default {
       const caught = this.robbers.filter(r => r.status === 'caught').length;
       const total = this.robbers.length;
       const success = caught / total > 0.5;
-      const baseLoss = 50000;
-      const lossMultiplier = 1 - caught / total;
-      const losses = Math.floor(baseLoss * lossMultiplier * total);
-      this.bank.totalMoney = Math.max(0, this.bank.totalMoney - losses);
-      this.bank.reputation = Math.max(20, this.bank.reputation - (20 * lossMultiplier));
+      
       this.robberyResult = {
         success,
-        losses,
         message: success
           ? `Ограбление предотвращено! Задержано ${caught} из ${total} грабителей`
           : `Ограбление завершено! Сбежало ${total - caught} грабителей`

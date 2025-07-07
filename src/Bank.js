@@ -8,7 +8,6 @@ export class Bank {
     this.isWindingDown = false;
     this.vipQueue = [];
     this.pensionerQueue = [];
-    this.totalMoney = 1000000;
     this.reputation = 100;
     this.lastVipArrivalTime = 0;
   }
@@ -75,6 +74,12 @@ export class Client {
     else if (this.patienceLevel < 50) this.emotion = 'annoyed';
     else this.emotion = 'neutral';
   }
+static resetIdCounter() {
+  // Сбрасываем только если нет активных клиентов
+  if (Client.nextId > 1000) { // Произвольное большое число
+    Client.nextId = 1;
+  }
+}
 }
 
 export class VipClient extends Client {
@@ -89,4 +94,10 @@ export class VipClient extends Client {
     const services = ['credit', 'consultation', 'investment']; // VIP клиенты чаще используют премиальные услуги
     return services[Math.floor(Math.random() * services.length)];
   }
+static resetIdCounter() {
+  // Сбрасываем только если нет активных клиентов
+  if (Client.nextId > 1000) { // Произвольное большое число
+    Client.nextId = 1;
+  }
+}
 }
