@@ -1,9 +1,11 @@
+/* Общий сброс стилей для всех элементов */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+/* Основной контейнер симуляции */
 .bank-simulation {
   font-family: Arial, sans-serif;
   max-width: 1200px;
@@ -15,6 +17,7 @@
   background: #f5f5f5;
 }
 
+/* Стили для панели управления */
 .controls {
   margin: 10px 0;
   padding: 15px;
@@ -26,6 +29,7 @@
   gap: 15px;
 }
 
+/* Стили для группы слайдеров */
 .slider-group {
   margin-bottom: 0;
   min-width: 250px;
@@ -43,6 +47,7 @@
   width: 100%;
 }
 
+/* Стили для группы кнопок */
 .button-group {
   width: 100%;
   display: flex;
@@ -51,6 +56,7 @@
   margin-top: 10px;
 }
 
+/* Базовые стили кнопок */
 button {
   padding: 8px 16px;
   background: #4CAF50;
@@ -71,6 +77,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Стили блока статистики */
 .stats {
   display: flex;
   flex-wrap: wrap;
@@ -82,6 +89,7 @@ button:disabled {
   font-size: 14px;
 }
 
+/* Сообщения о состоянии симуляции */
 .simulation-winding {
   color: #FF9800;
   font-weight: bold;
@@ -92,12 +100,14 @@ button:disabled {
   font-weight: bold;
 }
 
+/* Стили для оповещения об ограблении */
 .robbery-alert {
   color: #F44336;
   font-weight: bold;
   animation: blink 0.5s infinite;
 }
 
+/* Стили для результата ограбления */
 .robbery-result {
   padding: 5px;
   border-radius: 4px;
@@ -115,10 +125,12 @@ button:disabled {
   color: #F44336;
 }
 
+/* Анимация мигания для оповещения */
 @keyframes blink {
   50% { opacity: 0.5; }
 }
 
+/* Основная область визуализации банка */
 .bank-visualization {
   position: relative;
   width: 100%;
@@ -131,6 +143,7 @@ button:disabled {
   box-shadow: 0 0 15px rgba(0,0,0,0.1);
 }
 
+/* Стили для фона при ограблении */
 .robbery-alert-bg {
   position: relative;
 }
@@ -147,12 +160,14 @@ button:disabled {
   pointer-events: none;
 }
 
+/* Анимация фона при ограблении */
 @keyframes robberyAlert {
   0% { opacity: 0.3; }
   50% { opacity: 0.1; }
   100% { opacity: 0.3; }
 }
 
+/* Стили для стен банка */
 .bank-walls {
   position: absolute;
   width: 100%;
@@ -161,6 +176,7 @@ button:disabled {
   border: 2px solid #333;
 }
 
+/* Стили для входной двери */
 .entrance-door {
   position: absolute;
   left: 10px;
@@ -170,6 +186,7 @@ button:disabled {
   z-index: 1;
 }
 
+/* Стили для банкомата */
 .atm {
   position: absolute;
   left: 20%;
@@ -178,6 +195,7 @@ button:disabled {
   z-index: 1;
 }
 
+/* Стили для окон обслуживания */
 .service-window {
   position: absolute;
   width: 60px;
@@ -195,26 +213,31 @@ button:disabled {
   background-color: #4CAF50;
 }
 
+/* Специальные стили для VIP-окон */
 .vip-counter {
   border: 2px solid gold;
   background-color: #FFF9C4 !important;
 }
 
+/* Стили для окон для пенсионеров */
 .pensioner-counter {
   border: 2px solid #FF9800;
   background-color: #FFE0B2 !important;
 }
 
+/* Стили для закрытых окон */
 .counter-closed {
   background-color: #9E9E9E !important;
 }
 
+/* Подпись типа окна */
 .counter-type {
   font-size: 10px;
   margin-top: 5px;
   text-transform: capitalize;
 }
 
+/* Базовые стили клиентов */
 .client {
   position: absolute;
   width: 30px;
@@ -226,25 +249,30 @@ button:disabled {
   z-index: 3;
 }
 
+/* Стили для VIP-клиентов */
 .vip-client {
   z-index: 4;
 }
 
+/* Стили для клиентов-пенсионеров */
 .pensioner-client {
   z-index: 4;
 }
 
+/* Стили для emoji клиентов */
 .client-emoji {
   font-size: 24px;
   display: inline-block;
   animation: walk 0.5s infinite alternate;
 }
 
+/* Анимация ходьбы клиентов */
 @keyframes walk {
   from { transform: translateY(0); }
   to { transform: translateY(-3px); }
 }
 
+/* Анимация обслуживания клиентов */
 .serving-client .client-emoji {
   animation: serve 1s infinite;
 }
@@ -254,6 +282,7 @@ button:disabled {
   50% { transform: translateY(-5px); }
 }
 
+/* Подпись статуса клиента */
 .client-status {
   font-size: 10px;
   margin-top: 2px;
@@ -261,6 +290,7 @@ button:disabled {
   text-transform: capitalize;
 }
 
+/* Индикатор эмоций клиента */
 .emotion-indicator {
   width: 10px;
   height: 10px;
@@ -268,6 +298,7 @@ button:disabled {
   margin-top: 2px;
 }
 
+/* Цвета для разных состояний эмоций */
 .emotion-indicator.neutral {
   background-color: #4CAF50;
 }
@@ -280,16 +311,19 @@ button:disabled {
   background-color: #F44336;
 }
 
+/* Стили для входящих клиентов */
 .entering-client {
   z-index: 5;
   opacity: 0.8;
 }
 
+/* Стили для уходящих клиентов */
 .leaving-client {
   z-index: 5;
   opacity: 0.6;
 }
 
+/* Анимации для переходов клиентов */
 .client-move {
   transition: all 0.5s ease;
 }
@@ -304,6 +338,7 @@ button:disabled {
   animation: leave 0.5s reverse;
 }
 
+/* Анимация появления клиента */
 @keyframes enter {
   from {
     opacity: 0;
@@ -315,6 +350,7 @@ button:disabled {
   }
 }
 
+/* Анимация исчезновения клиента */
 @keyframes leave {
   from {
     opacity: 1;
@@ -326,6 +362,7 @@ button:disabled {
   }
 }
 
+/* Стили для грабителей */
 .robber {
   position: absolute;
   width: 40px;
@@ -346,6 +383,7 @@ button:disabled {
   text-align: center;
 }
 
+/* Стили для охранников */
 .guard {
   position: absolute;
   width: 35px;
@@ -360,39 +398,3 @@ button:disabled {
   text-align: center;
 }
 
-@media (max-width: 768px) {
-  .bank-simulation {
-    padding: 10px;
-    height: auto;
-  }
-  
-  .controls {
-   display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  }
-.left-column {
-  flex: 1;
-  min-width: 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.right-column {
-  flex: 1;
-  min-width: 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-  
-  .slider-group {
-    min-width: 100%;
-  }
-  
-  .bank-visualization {
-    height: 400px;
-    min-height: 400px;
-  }
-}
